@@ -72,36 +72,47 @@ module Typy =
 
 
 module PII =
+    open System
     let ENC_PREFIX = "ENC:"
-    let hide key x =
+    let private ffold fs = fs |> (Seq.fold (fun f s -> f >> s) id)
+    let private propsWithPii (t:Type) =
+        t.GetProperties(BindingFlags.Instance ||| BindingFlags.Public)
+        |> Array.filter (fun pi -> pi.GetCustomAttributes<PIIAttribute>() |> Seq.isEmpty |> not )
         
-        let enc (pi:PropertyInfo) (o:obj) =
-            let value = pi.GetValue(o) |> string //use converter if type is not string
-            let encValue = value |> Encryption.encrypt key
-            let newValue = sprintf "%s%s" ENC_PREFIX encValue
-            pi.SetValue(o,newValue)
-            ignore()
-            
+    let private makeMemberUpdateF f pi  = f pi
+    let makeUpdateF f t =
+        t |> propsWithPii
+        |> Seq.map (makeMemberUpdateF f)
+        |> ffold
+    
+    let private enc (pi:PropertyInfo) (key:string, o:obj) =
+        let value = pi.GetValue(o) |> string //use converter if type is not string
+        let encValue = value |> Encryption.encrypt key
+        let newValue = sprintf "%s%s" ENC_PREFIX encValue
+        pi.SetValue(o,newValue)
+        (key, o)
+        
+    let dec (pi:PropertyInfo) (key:string, o:obj) =
+        let value = pi.GetValue(o) |> string //use converter if type is not string
+        if(value |> String.startsWith ENC_PREFIX) then
+            let noPrefix = value |> String.removePrefix ENC_PREFIX
+            let decValue = noPrefix |> Encryption.decrypt key
+            pi.SetValue(o,decValue)
+            (key, o)
+        else (key, o)
+        
+    let hide key x =
+
         let t = x.GetType()
-        let pis = t.GetProperties(BindingFlags.Instance ||| BindingFlags.Public)
-                  |> Array.filter (fun pi -> pi.GetCustomAttributes<PIIAttribute>() |> Seq.isEmpty |> not )
-        pis |> Array.iter (fun pi -> enc pi x)
+        let pis = t |> propsWithPii
+        pis |> Array.iter (fun pi -> enc pi (key, x) |> ignore)
         x
         
     let show key x =
-        
-        let dec (pi:PropertyInfo) (key:string) (o:obj) =
-            let value = pi.GetValue(o) |> string //use converter if type is not string
-            if(value |> String.startsWith ENC_PREFIX) then
-                let noPrefix = value |> String.removePrefix ENC_PREFIX
-                let decValue = noPrefix|> Encryption.decrypt key
-                pi.SetValue(o,decValue)
-                ignore()
-            
+
         let t = x.GetType()
-        let pis = t.GetProperties(BindingFlags.Instance ||| BindingFlags.Public)
-                  |> Array.filter (fun pi -> pi.GetCustomAttributes<PIIAttribute>() |> Seq.isEmpty |> not )
-        pis |> Array.iter (fun pi -> dec pi key x)
+        let pis = t |> propsWithPii
+        pis |> Array.iter (fun pi -> dec pi (key, x) |> ignore)
         x
          
         
