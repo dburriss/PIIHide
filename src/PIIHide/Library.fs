@@ -1,37 +1,14 @@
 ﻿namespace PIIHide
 
-open System
-open System.Reflection
 // Examples
 // https://docs.microsoft.com/en-us/dotnet/api/system.security.cryptography.tripledescryptoserviceprovider?view=netframework-4.8
 // https://dotnetfiddle.net/8zMkWj
 
 // take a converter type for to and from string and type of property
-type IStringConverter =
-    abstract member CanConvert : t:Type -> bool
-    abstract member ToAString : value:obj -> string
-    abstract member FromAString : value:string -> obj
-    
-type DefaultConverter() =
-    interface IStringConverter with
-        member this.CanConvert t =
-            match t with
-            | t when t = typeof<string> -> true
-            | _ -> false
-        member this.ToAString (value:obj) = value.ToString()
-        member this.FromAString (value:string) = value :> obj
-
-type PIIAttribute(converterType:TypeInfo) =
-    inherit System.Attribute()
-    do
-        if(converterType |> (Typy.isAssignableTo<IStringConverter>) |> not) then
-            failwithf "%s does not implement IStringConverter." converterType.FullName
-            
-    let converter = Activator.CreateInstance(converterType |> Typy.asType)  
-    new() = PIIAttribute(converterType = typeof<DefaultConverter>.GetTypeInfo())
-    member val Converter = converter
+type PIIAttribute() = inherit System.Attribute()
 
 module String =
+    open System
     open System.Text
     let startsWith (value:string) (s:string) = s.StartsWith(value)
     let sub start len (s:string) = s.Substring(start, len)
@@ -85,6 +62,12 @@ module Encryption =
         let resultArr = decryptionTransform provider input
         provider.Clear()
         String.utf8String resultArr 
+
+module Typy =
+    open System.Reflection
+    type M =
+        | F of FieldInfo
+        | P of PropertyInfo
 
 
 module PII =
