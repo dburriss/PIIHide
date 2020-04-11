@@ -1,5 +1,6 @@
 module PIITests
 
+open System.Diagnostics
 open PIIHide
 open Xunit
 open Swensen.Unquote
@@ -36,3 +37,15 @@ let ``all string PII members are encrypted`` () =
     PII.hide key o |> ignore
     test <@ o.CustomerName |> String.startsWith "ENC:" @>
     test <@ o.Address |> String.startsWith "ENC:" @>
+    
+[<Fact>]
+let ``encrypt and decrypt 1 thousand simple objects in under 50ms`` () =
+    let o = aSimpleClass()
+    let key = aKey()
+    let watch = Stopwatch.StartNew()
+    
+    for i = 1 to 1000 do
+        PII.hide key o |> PII.show key |> ignore
+        
+    watch.Stop()
+    test <@ watch.ElapsedMilliseconds < 50L @>

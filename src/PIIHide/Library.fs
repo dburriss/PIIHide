@@ -1,7 +1,5 @@
 ﻿namespace PIIHide
 
-open System.Reflection
-
 // Examples
 // https://docs.microsoft.com/en-us/dotnet/api/system.security.cryptography.tripledescryptoserviceprovider?view=netframework-4.8
 // https://dotnetfiddle.net/8zMkWj
@@ -66,6 +64,7 @@ module Encryption =
         String.utf8String resultArr 
 
 module Typy =
+    open System.Reflection
     type M =
         | F of FieldInfo
         | P of PropertyInfo
@@ -73,19 +72,34 @@ module Typy =
 
 module PII =
     open System
+    open System.Reflection
+    open System.Collections.Generic
+    
     let ENC_PREFIX = "ENC:"
+    
+    // HELPERS
     let private ffold fs = fs |> (Seq.fold (fun f s -> f >> s) id)
     let private propsWithPii (t:Type) =
         t.GetProperties(BindingFlags.Instance ||| BindingFlags.Public)
         |> Array.filter (fun pi -> pi.GetCustomAttributes<PIIAttribute>() |> Seq.isEmpty |> not )
         
     let private makeMemberUpdateF f pi  = f pi
-    let makeUpdateF f props =
+    let private makeUpdateF f props =
         props
         |> Seq.map (makeMemberUpdateF f)
         |> ffold
         
-    let transformers encF decF (t:Type) =
+    let updateCache = Dictionary<Type,((string * obj -> string * obj) * (string * obj -> string * obj))>()
+    let private memoization (cache:Dictionary<_, _>) (f: 'a -> 'b) =
+        (fun x ->
+            match cache.TryGetValue(x) with
+            | true, cachedValue -> cachedValue
+            | _ -> 
+                let result = f x
+                cache.Add(x, result)
+                result)
+    let private transformers encF decF (t:Type) =
+        
         let props = t |> propsWithPii
         let encUpdate = makeUpdateF encF props
         let decUpdate = makeUpdateF decF props
@@ -98,7 +112,7 @@ module PII =
         pi.SetValue(o,newValue)
         (key, o)
         
-    let dec (pi:PropertyInfo) (key:string, o:obj) =
+    let private dec (pi:PropertyInfo) (key:string, o:obj) =
         let value = pi.GetValue(o) |> string //use converter if type is not string
         if(value |> String.startsWith ENC_PREFIX) then
             let noPrefix = value |> String.removePrefix ENC_PREFIX
@@ -106,14 +120,17 @@ module PII =
             pi.SetValue(o,decValue)
             (key, o)
         else (key, o)
+        
+    let private encryptionTransformers (t:Type) = t |> memoization updateCache (transformers enc dec)
     
+    // IMPLEMENTATION
     let hide key x =
-        let (encryptObj,_)  = x.GetType() |> transformers enc dec
+        let (encryptObj,_)  = x.GetType() |> encryptionTransformers
         encryptObj (key, x) |> ignore
         x
         
     let show key x =
-        let (_,decryptObj)  = x.GetType() |> transformers enc dec
+        let (_,decryptObj)  = x.GetType() |> encryptionTransformers
         decryptObj (key, x) |> ignore
         x
     
