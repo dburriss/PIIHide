@@ -84,7 +84,13 @@ module PII =
         props
         |> Seq.map (makeMemberUpdateF f)
         |> ffold
-    
+        
+    let transformers encF decF (t:Type) =
+        let props = t |> propsWithPii
+        let encUpdate = makeUpdateF encF props
+        let decUpdate = makeUpdateF decF props
+        (encUpdate,decUpdate)
+        
     let private enc (pi:PropertyInfo) (key:string, o:obj) =
         let value = pi.GetValue(o) |> string //use converter if type is not string
         let encValue = value |> Encryption.encrypt key
@@ -100,20 +106,14 @@ module PII =
             pi.SetValue(o,decValue)
             (key, o)
         else (key, o)
-        
-        
+    
     let hide key x =
-        let props = x.GetType() |> propsWithPii
-        let update = makeUpdateF enc props
-        update (key, x) |> ignore
+        let (encryptObj,_)  = x.GetType() |> transformers enc dec
+        encryptObj (key, x) |> ignore
         x
         
     let show key x =
-        let props = x.GetType() |> propsWithPii
-        let update = makeUpdateF dec props
-        update (key, x) |> ignore
+        let (_,decryptObj)  = x.GetType() |> transformers enc dec
+        decryptObj (key, x) |> ignore
         x
-         
-        
-        
-        
+    
