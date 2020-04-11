@@ -80,8 +80,8 @@ module PII =
         |> Array.filter (fun pi -> pi.GetCustomAttributes<PIIAttribute>() |> Seq.isEmpty |> not )
         
     let private makeMemberUpdateF f pi  = f pi
-    let makeUpdateF f t =
-        t |> propsWithPii
+    let makeUpdateF f props =
+        props
         |> Seq.map (makeMemberUpdateF f)
         |> ffold
     
@@ -101,18 +101,17 @@ module PII =
             (key, o)
         else (key, o)
         
+        
     let hide key x =
-
-        let t = x.GetType()
-        let pis = t |> propsWithPii
-        pis |> Array.iter (fun pi -> enc pi (key, x) |> ignore)
+        let props = x.GetType() |> propsWithPii
+        let update = makeUpdateF enc props
+        update (key, x) |> ignore
         x
         
     let show key x =
-
-        let t = x.GetType()
-        let pis = t |> propsWithPii
-        pis |> Array.iter (fun pi -> dec pi (key, x) |> ignore)
+        let props = x.GetType() |> propsWithPii
+        let update = makeUpdateF dec props
+        update (key, x) |> ignore
         x
          
         

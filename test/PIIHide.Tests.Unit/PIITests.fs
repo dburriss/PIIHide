@@ -4,11 +4,12 @@ open PIIHide
 open Xunit
 open Swensen.Unquote
 
-type SimpleStringClass() =
-    member val NotPii = "" with get, set
-    [<PII>] member val StringPii = "" with get, set
+type Purchase() =
+    member val OrderNumber = "" with get, set
+    [<PII>] member val CustomerName = "" with get, set
+    [<PII>] member val Address = "" with get, set
 
-let aSimpleClass() = SimpleStringClass(NotPii="not pi", StringPii = "hide me")
+let aSimpleClass() = Purchase(OrderNumber="not pi", CustomerName = "hide me")
 let aKey() = Encryption.makeKey()
 
 [<Fact>]
@@ -16,14 +17,22 @@ let ``hide encrypts all properties with PII attribute on simple string members``
     let o = aSimpleClass()
     let key = aKey()
     let enc = o |> PII.hide key
-    test <@ enc.NotPii |> String.startsWith "ENC:" |> not @>
-    test <@ enc.StringPii |> String.startsWith "ENC:" @>
+    test <@ enc.OrderNumber |> String.startsWith "ENC:" |> not @>
+    test <@ enc.CustomerName |> String.startsWith "ENC:" @>
     
 [<Fact>]
 let ``show decrypts all properties with PII attribute on simple string members`` () =
     let o = aSimpleClass()
     let key = aKey()
     PII.hide key o |> ignore
-    test <@ o.StringPii |> String.startsWith "ENC:" @>
+    test <@ o.CustomerName |> String.startsWith "ENC:" @>
     PII.show key o |> ignore
-    test <@ o.StringPii = (aSimpleClass()).StringPii @>
+    test <@ o.CustomerName = (aSimpleClass()).CustomerName @>
+    
+[<Fact>]
+let ``all string PII members are encrypted`` () =
+    let o = aSimpleClass()
+    let key = aKey()
+    PII.hide key o |> ignore
+    test <@ o.CustomerName |> String.startsWith "ENC:" @>
+    test <@ o.Address |> String.startsWith "ENC:" @>
