@@ -95,8 +95,7 @@ let ``encrypt and decrypt 1 thousand simple objects in under 100ms`` () =
     watch.Stop()
     test <@ watch.ElapsedMilliseconds < 100L @>
     
-[<Fact(Skip = "Handling complex properties increased time dramatically for decryption")>]
-//[<Fact>]
+[<Fact>]
 let ``encrypt an object encrypts PII members on nested member`` () =
     let o = aCustomer()
     let key = aKey()

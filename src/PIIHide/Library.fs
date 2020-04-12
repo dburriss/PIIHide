@@ -124,8 +124,8 @@ module PII =
         |> Seq.map (makeMemberUpdateF f)
         |> ffold
         
-//    let updateCache = Dictionary<Type,((string * obj -> string * obj) * (string * obj -> string * obj))>()
-    let updateCache = Dictionary<Type,((string * obj -> string * obj) * (string * obj -> string * obj))>()
+    let encryptorCache = Dictionary<Type,(string * obj -> string * obj)>()
+    let decryptorCache = Dictionary<Type,(string * obj -> string * obj)>()
     let private memoization (cache:Dictionary<_, _>) (f: 'a -> 'b) =
         (fun x ->
             match cache.TryGetValue(x) with
@@ -135,11 +135,10 @@ module PII =
                 cache.Add(x, result)
                 result)
         
-    let private transformers encF decF (t:Type) =
+    let private transformer f (t:Type) =
         let props = t |> propsWithPii
-        let encUpdate = makeUpdateF encF props
-        let decUpdate = makeUpdateF decF props
-        (encUpdate,decUpdate)
+        let update = makeUpdateF f props
+        update
         
     let rec private encryptObj key (value:obj) =
         match value with
@@ -156,9 +155,8 @@ module PII =
             pi.SetValue(o,newValue)
             (key, o)
         elif(pi.PropertyType |> Typy.isCustom) then
-            let props = pi.PropertyType |> propsWithPii
-            for ppi in props do
-                (enc ppi (key,value)) |> ignore
+            let encryptF = pi.PropertyType |> memoization encryptorCache (transformer enc)
+            encryptF (key, value) |> ignore
             (key, o)
         else (key, o)
     
@@ -176,22 +174,22 @@ module PII =
             pi.SetValue(o,newValue)
             (key, o)
         elif(pi.PropertyType |> Typy.isCustom) then
-            let props = pi.PropertyType |> propsWithPii
-            for ppi in props do
-                (dec ppi (key,value)) |> ignore
+            let decryptF = pi.PropertyType |> memoization decryptorCache (transformer dec)
+            decryptF (key, value) |> ignore
             (key, o)
         else (key, o)
         
-    let private encryptionTransformers (t:Type) = t |> memoization updateCache (transformers enc dec)
+    let private encryptionTransformers (t:Type) = t |> memoization encryptorCache (transformer enc)
+    let private decryptionTransformers (t:Type) = t |> memoization decryptorCache (transformer dec)
     
     // IMPLEMENTATION
     let hide key x =
-        let (encryptObj,_) = x.GetType() |> encryptionTransformers
-        encryptObj (key, x) |> ignore
+        let encryptF = x.GetType() |> encryptionTransformers
+        encryptF (key, x) |> ignore
         x
         
     let show key x =
-        let (_,decryptObj)  = x.GetType() |> encryptionTransformers
+        let decryptObj = x.GetType() |> decryptionTransformers
         decryptObj (key, x) |> ignore
         x
     
