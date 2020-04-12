@@ -124,6 +124,7 @@ module PII =
         |> Seq.map (makeMemberUpdateF f)
         |> ffold
         
+//    let updateCache = Dictionary<Type,((string * obj -> string * obj) * (string * obj -> string * obj))>()
     let updateCache = Dictionary<Type,((string * obj -> string * obj) * (string * obj -> string * obj))>()
     let private memoization (cache:Dictionary<_, _>) (f: 'a -> 'b) =
         (fun x ->
@@ -133,14 +134,14 @@ module PII =
                 let result = f x
                 cache.Add(x, result)
                 result)
-    let private transformers encF decF (t:Type) =
         
+    let private transformers encF decF (t:Type) =
         let props = t |> propsWithPii
         let encUpdate = makeUpdateF encF props
         let decUpdate = makeUpdateF decF props
         (encUpdate,decUpdate)
         
-    let private encryptObj key (value:obj) =
+    let rec private encryptObj key (value:obj) =
         match value with
         | null -> null
         | :? string as s -> s |> StringEncryption.encrypt key |> box
@@ -148,11 +149,18 @@ module PII =
         | :? DateTime as dt -> dt |> DateEncryption.encDt key |> box
         | _ -> failwithf "Encrypting %s type not supported." (value.GetType().FullName)
         
-    let private enc (pi:PropertyInfo) (key:string, o:obj) =
+    let rec private enc (pi:PropertyInfo) (key:string, o:obj) =
         let value = pi.GetValue(o)
-        let newValue = value |> encryptObj key
-        pi.SetValue(o,newValue)
-        (key, o)
+        if(pi.PropertyType |> Typy.isSimple) then 
+            let newValue = value |> encryptObj key
+            pi.SetValue(o,newValue)
+            (key, o)
+        elif(pi.PropertyType |> Typy.isCustom) then
+            let props = pi.PropertyType |> propsWithPii
+            for ppi in props do
+                (enc ppi (key,value)) |> ignore
+            (key, o)
+        else (key, o)
     
     let private decryptObj key (value:obj) =
         match value with
@@ -161,17 +169,24 @@ module PII =
         | :? DateTime as dt -> dt |> DateEncryption.decDt key |> box
         | _ -> failwithf "Decrypting %s type not supported." (value.GetType().FullName)
         
-    let private dec (pi:PropertyInfo) (key:string, o:obj) =
+    let rec private dec (pi:PropertyInfo) (key:string, o:obj) =
         let value = pi.GetValue(o)
-        let newValue = value |> decryptObj key
-        pi.SetValue(o,newValue)
-        (key, o)
+        if(pi.PropertyType |> Typy.isSimple) then 
+            let newValue = value |> decryptObj key
+            pi.SetValue(o,newValue)
+            (key, o)
+        elif(pi.PropertyType |> Typy.isCustom) then
+            let props = pi.PropertyType |> propsWithPii
+            for ppi in props do
+                (dec ppi (key,value)) |> ignore
+            (key, o)
+        else (key, o)
         
     let private encryptionTransformers (t:Type) = t |> memoization updateCache (transformers enc dec)
     
     // IMPLEMENTATION
     let hide key x =
-        let (encryptObj,_)  = x.GetType() |> encryptionTransformers
+        let (encryptObj,_) = x.GetType() |> encryptionTransformers
         encryptObj (key, x) |> ignore
         x
         
