@@ -6,6 +6,7 @@ MinimumVisualStudioVersion = 15.0.26124.0
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".paket", ".paket", "{EAC35922-9E41-41FD-BF8F-5B4DD0484428}"
 	ProjectSection(SolutionItems) = preProject
 		paket.dependencies = paket.dependencies
+		.paket\Paket.Restore - Copy.targets = .paket\Paket.Restore - Copy.targets
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{3606BAA5-B114-4415-88B8-779E4BA1EFCF}"

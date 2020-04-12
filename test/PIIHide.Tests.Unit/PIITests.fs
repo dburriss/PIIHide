@@ -37,6 +37,14 @@ let ``hide encrypts all properties with PII attribute on simple string members``
     test <@ enc.Name |> String.startsWith "ENC:" @>
     
 [<Fact>]
+let ``encrypting null returns null`` () =
+    let o = aDisplayCustomer()
+    o.Name <- null
+    let key = aKey()
+    let enc = o |> PII.hide key
+    test <@ enc.Name = null @>
+    
+[<Fact>]
 let ``hide encrypts all properties with PII attribute on simple date members`` () =
     let o = aCustomerActivity()
     let key = aKey()
@@ -67,7 +75,7 @@ let ``show decrypts all properties with PII attribute on simple date members`` (
     test <@ o1.LastActivity = o2.LastActivity @>
     
 [<Fact>]
-let ``encrypt and decrypt 1 thousand simple objects in under 50ms`` () =
+let ``encrypt and decrypt 1 thousand simple objects in under 60ms`` () =
     let o = aCustomer()
     let key = aKey()
     let watch = Stopwatch.StartNew()
@@ -76,4 +84,4 @@ let ``encrypt and decrypt 1 thousand simple objects in under 50ms`` () =
         PII.hide key o |> PII.show key |> ignore
         
     watch.Stop()
-    test <@ watch.ElapsedMilliseconds < 50L @>
+    test <@ watch.ElapsedMilliseconds < 60L @>

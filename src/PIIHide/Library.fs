@@ -12,7 +12,7 @@ type PIIAttribute() = inherit System.Attribute()
 module String =
     open System
     open System.Text
-    let startsWith (value:string) (s:string) = s.StartsWith(value)
+    let startsWith (value:string) (s:string) = if(s |> isNull) then false else s.StartsWith(value)
     let sub start len (s:string) = s.Substring(start, len)
     let utf8Bytes (s:string) = UTF8Encoding.UTF8.GetBytes(s)
     let utf8String arr = UTF8Encoding.UTF8.GetString(arr)
@@ -142,6 +142,7 @@ module PII =
         
     let private encryptObj key (value:obj) =
         match value with
+        | null -> null
         | :? string as s -> s |> StringEncryption.encrypt key |> box
         | :? DateTimeOffset as dt -> dt |> DateEncryption.encDtOff key |> box
         | :? DateTime as dt -> dt |> DateEncryption.encDt key |> box

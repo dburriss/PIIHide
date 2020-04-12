@@ -4,3 +4,5 @@ xunit.runner.visualstudio
 coverlet.collector
 FSharp.Core
 Unquote
+FsCheck
+FsCheck.Xunit

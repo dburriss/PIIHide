@@ -8,6 +8,7 @@
   <ItemGroup>
     <Compile Include="EncryptionTests.fs" />
     <Compile Include="PIITests.fs" />
+    <Compile Include="BoundaryTests.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
   <ItemGroup>
