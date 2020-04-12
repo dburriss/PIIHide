@@ -1,5 +1,7 @@
 ﻿namespace PIIHide
 
+open System
+
 // Examples
 // https://docs.microsoft.com/en-us/dotnet/api/system.security.cryptography.tripledescryptoserviceprovider?view=netframework-4.8
 // https://dotnetfiddle.net/8zMkWj
@@ -21,6 +23,37 @@ module String =
             let start = prefix.Length
             let len = ((s.Length) - start)
             s |> sub start len
+
+module DateEncryption =
+    // WARNING: Do not change these values once they have been used to encrypt
+    let private ENC_IS_OVER = 3000 
+    let private SHIFT_RANGE = 365000
+    let private ENC_PREFIX = TimeSpan.FromDays(365000.0)
+    let private dayShift key = (key.GetHashCode() % SHIFT_RANGE) |> Math.Abs |> float
+    let private tsDiff shift = (ENC_PREFIX) + TimeSpan.FromDays(shift)
+    
+    let encDt (key:string) (dt:DateTime) =
+        if(dt.Year > ENC_IS_OVER) then dt
+        else
+            let dayShift = key |> dayShift
+            dt + tsDiff dayShift
+    let encDtOff (key:string) (dt:DateTimeOffset) =
+        if(dt.Year > ENC_IS_OVER) then dt
+        else
+            let dayShift = key |> dayShift
+            dt + tsDiff dayShift
+            
+    let decDt (key:string) (dt:DateTime) =
+        if(dt.Year > ENC_IS_OVER) then
+            let dayShift = key |> dayShift
+            dt - tsDiff dayShift
+        else dt
+    
+    let decDtOff (key:string) (dt:DateTimeOffset) =
+        if(dt.Year > ENC_IS_OVER) then
+            let dayShift = key |> dayShift
+            dt - tsDiff dayShift
+        else dt
 
 //provide defaults for int, DateTime
 module Encryption =
@@ -63,20 +96,22 @@ module Encryption =
         provider.Clear()
         String.utf8String resultArr 
 
-module Typy =
-    open System.Reflection
-    type M =
-        | F of FieldInfo
-        | P of PropertyInfo
-
-
+module StringEncryption =
+    let private ENC_PREFIX = "ENC:"
+    let encrypt key value =
+        if(value |> String.startsWith ENC_PREFIX) then value
+        else value |> Encryption.encrypt key |> sprintf "%s%s" ENC_PREFIX
+        
+    let decrypt key value =
+        if(value |> String.startsWith ENC_PREFIX) then
+            value |> String.removePrefix ENC_PREFIX |> Encryption.decrypt key
+        else value
+        
 module PII =
     open System
     open System.Reflection
     open System.Collections.Generic
-    
-    let ENC_PREFIX = "ENC:"
-    
+
     // HELPERS
     let private ffold fs = fs |> (Seq.fold (fun f s -> f >> s) id)
     let private propsWithPii (t:Type) =
@@ -105,21 +140,31 @@ module PII =
         let decUpdate = makeUpdateF decF props
         (encUpdate,decUpdate)
         
+    let private encryptObj key (value:obj) =
+        match value with
+        | :? string as s -> s |> StringEncryption.encrypt key |> box
+        | :? DateTimeOffset as dt -> dt |> DateEncryption.encDtOff key |> box
+        | :? DateTime as dt -> dt |> DateEncryption.encDt key |> box
+        | _ -> failwithf "Encrypting %s type not supported." (value.GetType().FullName)
+        
     let private enc (pi:PropertyInfo) (key:string, o:obj) =
-        let value = pi.GetValue(o) |> string //use converter if type is not string
-        let encValue = value |> Encryption.encrypt key
-        let newValue = sprintf "%s%s" ENC_PREFIX encValue
+        let value = pi.GetValue(o)
+        let newValue = value |> encryptObj key
         pi.SetValue(o,newValue)
         (key, o)
+    
+    let private decryptObj key (value:obj) =
+        match value with
+        | :? string as s -> s |> StringEncryption.decrypt key |> box
+        | :? DateTimeOffset as dt -> dt |> DateEncryption.decDtOff key |> box
+        | :? DateTime as dt -> dt |> DateEncryption.decDt key |> box
+        | _ -> failwithf "Decrypting %s type not supported." (value.GetType().FullName)
         
     let private dec (pi:PropertyInfo) (key:string, o:obj) =
-        let value = pi.GetValue(o) |> string //use converter if type is not string
-        if(value |> String.startsWith ENC_PREFIX) then
-            let noPrefix = value |> String.removePrefix ENC_PREFIX
-            let decValue = noPrefix |> Encryption.decrypt key
-            pi.SetValue(o,decValue)
-            (key, o)
-        else (key, o)
+        let value = pi.GetValue(o)
+        let newValue = value |> decryptObj key
+        pi.SetValue(o,newValue)
+        (key, o)
         
     let private encryptionTransformers (t:Type) = t |> memoization updateCache (transformers enc dec)
     

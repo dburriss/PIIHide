@@ -1,46 +1,74 @@
 module PIITests
 
+open System
 open System.Diagnostics
 open PIIHide
 open Xunit
 open Swensen.Unquote
 
-type Purchase() =
-    member val OrderNumber = "" with get, set
-    [<PII>] member val CustomerName = "" with get, set
-    [<PII>] member val Address = "" with get, set
+type DisplayCustomer() =
+    member val CustomerNumber = "" with get, set
+    [<PII>] member val Name = "" with get, set
+    
+type CustomerActivity() =
+    member val CustomerNumber = "" with get, set
+    member val Orders = 0 with get, set
+    [<PII>] member val CreatedAt = DateTime.MinValue with get, set
+    [<PII>] member val LastActivity = DateTimeOffset.MinValue with get, set
 
-let aSimpleClass() = Purchase(OrderNumber="not pi", CustomerName = "hide me")
+type Customer() =
+    member val CustomerNumber = "" with get, set
+    [<PII>] member val Name = "" with get, set
+    [<PII>] member val Address = "" with get, set
+    [<PII>] member val Birth = DateTime.MinValue with get, set
+    
+
+let aDisplayCustomer() = DisplayCustomer(CustomerNumber="not pi", Name = "hide me")
+let aCustomerActivity() = CustomerActivity(CustomerNumber="not pi", CreatedAt = DateTime.Now, LastActivity = DateTimeOffset.Now)
+let aCustomer() = Customer(CustomerNumber="not pi", Name = "hide me")
 let aKey() = Encryption.makeKey()
 
 [<Fact>]
 let ``hide encrypts all properties with PII attribute on simple string members`` () =
-    let o = aSimpleClass()
+    let o = aDisplayCustomer()
     let key = aKey()
     let enc = o |> PII.hide key
-    test <@ enc.OrderNumber |> String.startsWith "ENC:" |> not @>
-    test <@ enc.CustomerName |> String.startsWith "ENC:" @>
+    test <@ enc.CustomerNumber |> String.startsWith "ENC:" |> not @>
+    test <@ enc.Name |> String.startsWith "ENC:" @>
+    
+[<Fact>]
+let ``hide encrypts all properties with PII attribute on simple date members`` () =
+    let o = aCustomerActivity()
+    let key = aKey()
+    let enc = o |> PII.hide key
+    test <@ enc.CreatedAt.Year > 3000 @>
+    test <@ enc.LastActivity.Year > 3000 @>
     
 [<Fact>]
 let ``show decrypts all properties with PII attribute on simple string members`` () =
-    let o = aSimpleClass()
+    let o = aDisplayCustomer()
     let key = aKey()
     PII.hide key o |> ignore
-    test <@ o.CustomerName |> String.startsWith "ENC:" @>
+    test <@ o.Name |> String.startsWith "ENC:" @>
     PII.show key o |> ignore
-    test <@ o.CustomerName = (aSimpleClass()).CustomerName @>
     
 [<Fact>]
-let ``all string PII members are encrypted`` () =
-    let o = aSimpleClass()
+let ``show decrypts all properties with PII attribute on simple date members`` () =
+    let o1 = aCustomerActivity()
+    let o2 = aCustomerActivity()
+    o2.CreatedAt <- o1.CreatedAt
+    o2.LastActivity <- o1.LastActivity
     let key = aKey()
-    PII.hide key o |> ignore
-    test <@ o.CustomerName |> String.startsWith "ENC:" @>
-    test <@ o.Address |> String.startsWith "ENC:" @>
+    PII.hide key o1 |> ignore
+    test <@ o1.CreatedAt.Year > 3000 @>
+    test <@ o1.LastActivity.Year > 3000 @>
+    PII.show key o1 |> ignore
+    test <@ o1.CreatedAt = o2.CreatedAt @>
+    test <@ o1.LastActivity = o2.LastActivity @>
     
 [<Fact>]
 let ``encrypt and decrypt 1 thousand simple objects in under 50ms`` () =
-    let o = aSimpleClass()
+    let o = aCustomer()
     let key = aKey()
     let watch = Stopwatch.StartNew()
     
