@@ -6,9 +6,10 @@ open System
 // https://docs.microsoft.com/en-us/dotnet/api/system.security.cryptography.tripledescryptoserviceprovider?view=netframework-4.8
 // https://dotnetfiddle.net/8zMkWj
 
-// take a converter type for to and from string and type of property
+/// Attribute for marking a property as containing personal identifiable information
 type PIIAttribute() = inherit System.Attribute()
 
+/// Functional interaction with Strings
 module String =
     open System
     open System.Text
@@ -24,6 +25,7 @@ module String =
             let len = ((s.Length) - start)
             s |> sub start len
 
+/// Allows a custom encryption of date types (under year 3000)
 module DateEncryption =
     // WARNING: Do not change these values once they have been used to encrypt
     let private ENC_IS_OVER = 3000 
@@ -55,7 +57,7 @@ module DateEncryption =
             dt - tsDiff dayShift
         else dt
 
-//provide defaults for int, DateTime
+/// Encryption and decryption with a key. Currently uses AES.
 module Encryption =
     
     open System
@@ -66,11 +68,11 @@ module Encryption =
     let private padding = PaddingMode.PKCS7
     
     let private createProvider toBytes (key : string)=
-        let tripleDES = new AesCryptoServiceProvider()
-        tripleDES.Key <- toBytes key
-        tripleDES.Mode <- mode
-        tripleDES.Padding <- padding
-        tripleDES
+        let provider = new AesCryptoServiceProvider()
+        provider.Key <- toBytes key
+        provider.Mode <- mode
+        provider.Padding <- padding
+        provider
         
     let private encryptionTransform toBytes (provider:#SymmetricAlgorithm) value =
         let inputArray = toBytes value
@@ -106,17 +108,17 @@ module StringEncryption =
         if(value |> String.startsWith ENC_PREFIX) then
             value |> String.removePrefix ENC_PREFIX |> Encryption.decrypt key
         else value
-        
+
+/// Encrypts and decrypts objects whose properties are marked with `PIIAttribute`.
 module PII =
-    open System
+    
     open System.Reflection
     open System.Collections.Generic
 
     // HELPERS
     let private ffold fs = fs |> (Seq.fold (fun f s -> f >> s) id)
     let private propsWithPii (t:Type) =
-        t.GetProperties(BindingFlags.Instance ||| BindingFlags.Public)
-        |> Array.filter (fun pi -> pi.GetCustomAttributes<PIIAttribute>() |> Seq.isEmpty |> not )
+        t |> Typy.propInfoWithAttr<PIIAttribute> (BindingFlags.Instance ||| BindingFlags.Public)
         
     let private makeMemberUpdateF f pi  = f pi
     let private makeUpdateF f props =
@@ -192,4 +194,3 @@ module PII =
         let decryptObj = x.GetType() |> decryptionTransformers
         decryptObj (key, x) |> ignore
         x
-    
