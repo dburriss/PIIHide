@@ -36,3 +36,27 @@ Below you can see the output.
 }
 
 ```
+
+For:
+
+```csharp
+using PIIHide;
+//...
+public class Person
+{
+    public long Id { get; set; }
+    [PII]
+    public string Name { get; set; }
+    [PII]
+    public Address Address { get; set; }
+}
+
+public class Address
+{
+    [PII]
+    public string Street { get; set; }
+    [PII]
+    public string PostalCode { get; set; }
+    public string Country { set; get; }
+}
+```

@@ -41,7 +41,9 @@ public class Address
     public string Country { set; get; }
 }
 ```
+
 Then generate a key and call `Encrypt`/`Decrypt` on an instance of your class.
+
 ```csharp
 using PIIHide;
 using Encryption = PIIHide.CSharp.Encryption;
@@ -64,6 +66,8 @@ var person = MakePerson();
 Encryption.Encrypt(key, person);
 Encryption.Decrypt(key, person);
 ```
+
+See the [sample](/samples/csharp/ConsoleApp/) for what this would look like.
 
 ### F#
 
