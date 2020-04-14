@@ -49,8 +49,8 @@ using PIIHide.CSharp.Extensions;
 //...
 var key = Encryption.MakeKey();
 var person = MakePerson();
-person.Encrypt(person, key);
-person.Decrypt(person, key);
+person.Encrypt(key);
+person.Decrypt(key);
 ```
 
 OR
