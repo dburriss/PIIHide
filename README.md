@@ -61,8 +61,8 @@ using Encryption = PIIHide.CSharp.Encryption;
 //...
 var key = Encryption.MakeKey();
 var person = MakePerson();
-Encryption.Encrypt(key);
-Encryption.Decrypt(key);
+Encryption.Encrypt(key, person);
+Encryption.Decrypt(key, person);
 ```
 
 ### F#
