@@ -126,8 +126,8 @@ module PII =
         |> Seq.map (makeMemberUpdateF f)
         |> ffold
         
-    let encryptorCache = Dictionary<Type,(string * obj -> string * obj)>()
-    let decryptorCache = Dictionary<Type,(string * obj -> string * obj)>()
+    let private encryptorCache = Dictionary<Type,(string * obj -> string * obj)>()
+    let private decryptorCache = Dictionary<Type,(string * obj -> string * obj)>()
     let private memoization (cache:Dictionary<_, _>) (f: 'a -> 'b) =
         (fun x ->
             match cache.TryGetValue(x) with
