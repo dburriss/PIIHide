@@ -2,7 +2,7 @@
 
 This is an experimental library that aims to make it simple to encrypt/decrypt specific properties on an object.
 
-> Currently just testing out. No Nuget yet. If you are interested let me know.
+![PiiHide on Nuget](https://github.com/dburriss/PIIHide/workflows/PiiHide%20-%20Publish%20to%20Nuget/badge.svg)
 
 ## Features
 
