@@ -3,7 +3,7 @@
 This is an experimental library that aims to make it simple to encrypt/decrypt specific properties on an object.
 
 ![PiiHide on Nuget](https://github.com/dburriss/PIIHide/workflows/PiiHide%20-%20Publish%20to%20Nuget/badge.svg)
-
+[![NuGet Status](https://img.shields.io/nuget/v/PiiHide.svg)](https://www.nuget.org/packages/PiiHide)
 ## Features
 
 - Easy marking of personally identifiable information with the `PIIAttribute`
@@ -46,10 +46,9 @@ Then generate a key and call `Encrypt`/`Decrypt` on an instance of your class.
 
 ```csharp
 using PIIHide;
-using Encryption = PIIHide.CSharp.Encryption;
 using PIIHide.CSharp.Extensions;
 //...
-var key = Encryption.MakeKey();
+var key = PII.GenerateKey();
 var person = MakePerson();
 person.Encrypt(key);
 person.Decrypt(key);
@@ -59,12 +58,12 @@ OR
 
 ```csharp
 using PIIHide;
-using Encryption = PIIHide.CSharp.Encryption;
+using PIIHide.CSharp;
 //...
-var key = Encryption.MakeKey();
+var key = PIIEncryption.GenerateKey();
 var person = MakePerson();
-Encryption.Encrypt(key, person);
-Encryption.Decrypt(key, person);
+PIIEncryption.Encrypt(key, person);
+PIIEncryption.Decrypt(key, person);
 ```
 
 See the [sample](/samples/csharp/ConsoleApp/) for what this would look like.

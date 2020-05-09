@@ -1,11 +1,10 @@
 namespace PIIHide.CSharp
 
-type Encryption() =
-    static member MakeKey() = PIIHide.Encryption.makeKey()
+type PIIEncryption() =
+    static member GenerateKey() = PIIHide.Crypto.makeKey()
     static member Encrypt (key, value) = PIIHide.PII.hide key value |> ignore
     static member Decrypt (key, value) = PIIHide.PII.show key value |> ignore
     
-
 namespace PIIHide.CSharp.Extensions
 
 open System.Runtime.CompilerServices

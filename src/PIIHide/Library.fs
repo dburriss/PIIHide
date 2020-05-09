@@ -59,7 +59,7 @@ module DateEncryption =
         else dt
 
 /// Encryption and decryption with a key. Currently uses AES.
-module Encryption =
+module Crypto =
     
     open System
     open System.Security.Cryptography
@@ -104,11 +104,11 @@ module StringEncryption =
     let isEncrypted s = s |> String.startsWith ENC_PREFIX
     let encrypt key value =
         if(value |> String.startsWith ENC_PREFIX) then value
-        else value |> Encryption.encrypt key |> sprintf "%s%s" ENC_PREFIX
+        else value |> Crypto.encrypt key |> sprintf "%s%s" ENC_PREFIX
         
     let decrypt key value =
         if(value |> String.startsWith ENC_PREFIX) then
-            value |> String.removePrefix ENC_PREFIX |> Encryption.decrypt key
+            value |> String.removePrefix ENC_PREFIX |> Crypto.decrypt key
         else value
 
 /// Encrypts and decrypts objects whose properties are marked with `PIIAttribute`.
@@ -187,6 +187,10 @@ module PII =
     let private decryptionTransformers (t:Type) = t |> memoization decryptorCache (transformer dec)
     
     // IMPLEMENTATION
+    [<CompiledName("GenerateKey")>]
+    let generateKey() = Crypto.makeKey()
+    
+    [<CompiledName("IsEncrypted")>]
     let isEncrypted (value:obj) =
         match value with
         | null -> false
@@ -200,12 +204,14 @@ module PII =
         if(value |> isEncrypted) then
             Encrypted
         else Decrypted
-        
+    
+    [<CompiledName("Hide")>]
     let hide key x =
         let encryptF = x.GetType() |> encryptionTransformers
         encryptF (key, x) |> ignore
         x
         
+    [<CompiledName("Show")>]
     let show key x =
         let decryptObj = x.GetType() |> decryptionTransformers
         decryptObj (key, x) |> ignore

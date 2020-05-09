@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Text.Json;
+
 using PIIHide;
-using Encryption = PIIHide.CSharp.Encryption;
 using PIIHide.CSharp.Extensions;
 
 namespace ConsoleApp
@@ -10,7 +10,7 @@ namespace ConsoleApp
     {
         static void Main(string[] args)
         {
-            var key = Encryption.MakeKey();
+            var key = PII.GenerateKey();
             var person = MakePerson();
             PrintPerson(person, "A PERSON MODEL", ConsoleColor.Red);
             person.Encrypt(key);
