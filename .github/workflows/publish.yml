@@ -16,11 +16,6 @@ jobs:
         with:
           dotnet-version: 3.1.200
 
-      # Install Paket
-      - name: Install Paket
-        run: dotnet tool install paket
-        working-directory: ./
-
       # Restore
       - name: Build
         run: dotnet paket install
