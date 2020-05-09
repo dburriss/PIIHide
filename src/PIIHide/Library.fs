@@ -33,7 +33,8 @@ module DateEncryption =
     let private ENC_PREFIX = TimeSpan.FromDays(365000.0)
     let private dayShift key = (key.GetHashCode() % SHIFT_RANGE) |> Math.Abs |> float
     let private tsDiff shift = (ENC_PREFIX) + TimeSpan.FromDays(shift)
-    
+    let isEncrypted (dt:DateTime) = dt.Year > ENC_IS_OVER
+    let isEncryptedOff (dt:DateTimeOffset) = dt.Year > ENC_IS_OVER
     let encDt (key:string) (dt:DateTime) =
         if(dt.Year > ENC_IS_OVER) then dt
         else
@@ -100,6 +101,7 @@ module Encryption =
 
 module StringEncryption =
     let private ENC_PREFIX = "ENC:"
+    let isEncrypted s = s |> String.startsWith ENC_PREFIX
     let encrypt key value =
         if(value |> String.startsWith ENC_PREFIX) then value
         else value |> Encryption.encrypt key |> sprintf "%s%s" ENC_PREFIX
@@ -185,6 +187,20 @@ module PII =
     let private decryptionTransformers (t:Type) = t |> memoization decryptorCache (transformer dec)
     
     // IMPLEMENTATION
+    let isEncrypted (value:obj) =
+        match value with
+        | null -> false
+        | :? string as s -> s |> StringEncryption.isEncrypted
+        | :? DateTime as dt -> dt |> DateEncryption.isEncrypted
+        | :? DateTimeOffset as dt -> dt |> DateEncryption.isEncryptedOff
+        | :? obj as o -> failwithf "Not implemented for type %s" (value.GetType().FullName)
+        | _ -> failwithf "Unsupported check for type %s" (value.GetType().FullName)
+        
+    let (|Encrypted|Decrypted|) value =
+        if(value |> isEncrypted) then
+            Encrypted
+        else Decrypted
+        
     let hide key x =
         let encryptF = x.GetType() |> encryptionTransformers
         encryptF (key, x) |> ignore
