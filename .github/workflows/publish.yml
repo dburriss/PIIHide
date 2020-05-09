@@ -1,0 +1,38 @@
+name: PiiHide - Publish to Nuget
+on:
+  push:
+    branches:
+      - master # Default release branch
+jobs:
+  publish:
+    name: build, pack & publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      # Setup dotnet
+      - name: Setup dotnet
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 3.1.200
+
+      # Build
+      - name: Build
+        run: dotnet build --configuration Release
+        working-directory: ./
+
+      # Test
+      - name: Run unit tests
+        run: dotnet test --configuration Release
+        working-directory: ./
+      
+      # Pack
+      - name: Pack
+        run: dotnet pack --configuration Release
+        working-directory: ./src/PIIHide/
+
+      # Publish
+      - name: Publish
+        run: dotnet nuget push **/*.nupkg --api-key ${{ secrets.NUGET_DEPLOY_KEY }} --source https://api.nuget.org/v3/index.json
+        working-directory: ./src/PIIHide/
+      
