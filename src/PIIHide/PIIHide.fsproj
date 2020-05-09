@@ -2,6 +2,14 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
+    <Version>0.0.1</Version>
+    <IsPackable>true</IsPackable>
+    <PackageId>PiiHide</PackageId>
+    <Authors>Devon Burriss</Authors>
+    <Description>A library for encrypting and decrypting personal identifiable information on an object.</Description>
+    <PackageTags>PII;Encryption;GDPR;Data Protection</PackageTags>
+    <RepositoryUrl>https://github.com/dburriss/PIIHide</RepositoryUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Typy.fs" />
