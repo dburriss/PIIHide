@@ -83,7 +83,7 @@ let ``show decrypts all properties with PII attribute on simple date members`` (
     test <@ o1.CreatedAt = o2.CreatedAt @>
     test <@ o1.LastActivity = o2.LastActivity @>
     
-[<Fact>]
+[<Fact(Skip="This is just a sanity check during development")>]
 let ``encrypt and decrypt 1 thousand simple objects in under 100ms`` () =
     let o = aCustomer()
     let key = aKey()
