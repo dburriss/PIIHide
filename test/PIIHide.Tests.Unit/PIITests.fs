@@ -35,7 +35,7 @@ let aCustomer() =
                 Name = "hide me",
                 Address = Address(Street="1 Nowhere", PostCode="AZ0001", Country="Merica")
             )
-let aKey() = Crypto.makeKey()
+let aKey() = PII.generateKey()
 
 [<Fact>]
 let ``hide encrypts all properties with PII attribute on simple string members`` () =

@@ -78,3 +78,17 @@ let ``DateTimeOffset encrypt is idempotent`` () =
     test <@ enc1 = enc2 @>
     test <@ result = value @>
 
+type R = {
+    [<PII>] S1 : string
+    [<PII>] D1 : DateTimeOffset
+}
+
+[<Fact>]
+let ``Record encrypt is encrypted`` () =
+    let testR = { S1 = "Test"; D1 = DateTimeOffset.Now }
+    let fields = Microsoft.FSharp.Reflection.FSharpValue.GetRecordFields(testR, System.Reflection.BindingFlags.Public)
+    let key = PII.generateKey()
+    let encR = testR |> PII.hide key
+    test <@ encR.S1.StartsWith("ENC:") @>
+    test <@ encR.D1.Year > 3000 @>
+

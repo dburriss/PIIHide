@@ -8,7 +8,7 @@ open System
 
 /// Attribute for marking a property as containing personal identifiable information
 type PIIAttribute() = inherit System.Attribute()
-
+type Key = | Key of string
 /// Functional interaction with Strings
 module String =
     open System
@@ -188,7 +188,7 @@ module PII =
     
     // IMPLEMENTATION
     [<CompiledName("GenerateKey")>]
-    let generateKey() = Crypto.makeKey()
+    let generateKey() = Crypto.makeKey() |> Key
     
     [<CompiledName("IsEncrypted")>]
     let isEncrypted (value:obj) =
@@ -206,13 +206,13 @@ module PII =
         else Decrypted
     
     [<CompiledName("Hide")>]
-    let hide key x =
+    let hide (Key key) x =
         let encryptF = x.GetType() |> encryptionTransformers
         encryptF (key, x) |> ignore
         x
         
     [<CompiledName("Show")>]
-    let show key x =
+    let show (Key key) x =
         let decryptObj = x.GetType() |> decryptionTransformers
         decryptObj (key, x) |> ignore
         x
